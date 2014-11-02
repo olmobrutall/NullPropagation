@@ -117,34 +117,26 @@ namespace System.Linq.Expressions
 
         public override Expression Reduce()
         {
-            var fullAccessExpression = ExpressionReplacer.Replace(AccessExpression, AccessParameter,
-                    Nullable.GetUnderlyingType(Receiver.Type) == null ? Receiver : Expression.Property(Receiver, "Value"));
-
-            if (fullAccessExpression.Type != this.Type)
-                fullAccessExpression = Expression.Convert(fullAccessExpression, this.Type);
-
-            return Expression.Condition(Expression.Equal(Receiver, Expression.Constant(null, Receiver.Type)),
-                Expression.Constant(null, Type), fullAccessExpression);
-        }
-
-        class ExpressionReplacer : ExpressionVisitor
-        {
-            Expression find;
-            Expression replaceBy;
-
-            internal static Expression Replace(Expression expression, Expression find, Expression replaceBy)
+            if (this.Receiver.Type == this.AccessParameter.Type) //reference type
             {
-                ExpressionReplacer replacer = new ExpressionReplacer { find = find, replaceBy = replaceBy };
-
-                return replacer.Visit(expression);
+                return Expression.Block(new []{this.AccessParameter },
+                    Expression.Assign(this.AccessParameter, this.Receiver),
+                    Expression.Condition(
+                        Expression.Equal(this.AccessParameter, Expression.Constant(null, this.AccessParameter.Type)),
+                        Expression.Constant(null, this.Type),
+                        this.AccessExpression));
             }
-
-            public override Expression Visit(Expression node)
+            else //nullable type
             {
-                if (node == find)
-                    return replaceBy;
-
-                return base.Visit(node);
+               var nullableParam = Expression.Parameter(this.Receiver.Type);
+               return Expression.Block(new []{nullableParam },
+                    Expression.Assign(nullableParam, this.Receiver),
+                    Expression.Condition(
+                        Expression.Equal(nullableParam, Expression.Constant(null, nullableParam.Type)),
+                        Expression.Constant(null, this.Type),
+                        Expression.Block(new []{this.AccessParameter}, 
+                            Expression.Assign(this.AccessParameter, Expression.Convert(nullableParam, this.AccessParameter.Type)),
+                            this.AccessExpression)));
             }
         }
 
