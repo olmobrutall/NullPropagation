@@ -105,10 +105,6 @@ namespace NullPropagation
 
         public override string ToString()
         {
-            var access = AccessExpression.ToString();
-
-            var start = this.AccessParameter.ToString() + ".";
-
             string receiver = Receiver.ToString();
 
             if (!(Receiver.NodeType == ExpressionType.MemberAccess ||
@@ -116,10 +112,12 @@ namespace NullPropagation
                 Receiver.NodeType == ExpressionType.Parameter))
                 receiver = "(" + receiver + ")";
 
-            if (access.StartsWith(start))
-                return receiver + "?." + access.Substring(start.Length);
+            var access = AccessExpression.ToString();
+            var start = this.AccessParameter.ToString();
+            if (access.StartsWith(start + ".") || access.StartsWith(start + "["))
+                return receiver + "?" + access.Substring(start.Length);
 
-            return receiver + "?( " + this.AccessParameter.ToString() + " => " + access + ")";
+            return receiver + "?(" + this.AccessParameter.ToString() + " => " + access + ")";
         }
     }
 }

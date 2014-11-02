@@ -71,6 +71,36 @@ namespace NullPropagation
 
             Assert.Equal(func.ToString(), reduced.ToString()); 
         }
+
+        [Fact]
+        public void DelegateInvoke()
+        {
+            Expression<Func<Func<char>, char?>> func = f => f == null ? null : (char?)f();
+
+            Expression exp = NullPropagationRecoverer.RecoverNullPropagation(func);
+
+            Assert.Equal("f => f?(Param_0 => Invoke(Param_0))", exp.ToString()); //InvokeExpression ToString is the guilty
+        }
+
+        [Fact]
+        public void ArrayAccess()
+        {
+            Expression<Func<char[], char?>> func = s => s == null ? null : (char?)s[0];
+
+            Expression exp = NullPropagationRecoverer.RecoverNullPropagation(func);
+
+            Assert.Equal("s => s?[0]", exp.ToString());
+        }
+
+        [Fact]
+        public void StringIndexer()
+        {
+            Expression<Func<string, char?>> func = s => s == null ? null : (char?)s[0];
+
+            Expression exp = NullPropagationRecoverer.RecoverNullPropagation(func);
+
+            Assert.Equal("s => s?.get_Chars(0)", exp.ToString());
+        }
     }
 
 }
